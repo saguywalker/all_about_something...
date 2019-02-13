@@ -23,28 +23,25 @@ def get_data(file):
 def get_hr(data):
     raw = mne.io.RawArray(data.reshape(1, -1), info)
     times = np.arange(0, data.shape[0] / SFREQ, 1 / SFREQ)
-    events , _, _ = mne.preprocessing.find_ecg_events(raw)
+    print(data.shape, times.shape, times[-1])
+    events , _, avg_pulse = mne.preprocessing.find_ecg_events(raw)
     events = events[:,0]
-    #avg_pulse = events.shape[0] * 60.0 / (times[-1] - times[0])
     hr = []
     for i in range(events.shape[0] - 1):
-        #print("2 peaks are {} and {}".format(events[i], events[i+1]))
         duration = times[events[i+1]] - times[events[i]]
-        #print("duration = {}, heart rate = {}".format(duration, 60/duration))
-        hr.append(((events[i],events[i+1]), 60 / duration))
-        
-    return hr
+        hr.append( ((times[events[i]],times[events[i+1]]), 60 / duration))
+    return (hr, times[-1], avg_pulse)
 
 if __name__ == "__main__":
     file_path = os.path.join(sys.argv[1], "Biosignalsplux")
     files = [(file_path, f) for f in os.listdir(file_path) if ".csv" in f]
     print("List of files: {}".format(files))
-    data = [[file[1], get_data(file)] for file in files]
-    hr = [[d[0], get_hr(d[1])] for d in data]
-    for x in hr:
-        print("Reading {} ...".format(x[0]))
-        for xx in x[1]:
-            print("Index: {}, heart rate = {}".format(xx[0], xx[1]))
-        print("*"*30)
 
+    data = [get_data(file) for file in files]
+    hr = [get_hr(d) for d in data]
+    for i, x in enumerate(hr):
+        print("Reading {}, avg_hr: {:.2f}, times: {:.2f} ...".format(files[i][1], x[1], x[2]))
+        for xx in x[0]:
+            print("heart rate of ({:.2f}, {:.2f}): {:.2f}".format(xx[0][0], xx[0][1], xx[1]))
+        
 

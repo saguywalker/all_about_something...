@@ -4,7 +4,7 @@ import numpy as np
 import mne
 import sys
 
-SFREQ = 3000
+SFREQ = 300
 info = mne.create_info(ch_names=["ECG"], sfreq=SFREQ, ch_types=["ecg"])
 TIME_RANGE = 6*3000
 

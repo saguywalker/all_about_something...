@@ -3,33 +3,40 @@ import pandas as pd
 import numpy as np
 import mne
 import sys
-
-SFREQ = 300
-info = mne.create_info(ch_names=["ECG"], sfreq=SFREQ, ch_types=["ecg"])
-TIME_RANGE = 6*3000
+import ownTime
+import re
 
 def get_data(file):
     path = os.path.join(file[0], file[1])
-    data = pd.read_csv(path).values
+    data = pd.read_csv(path)
     if data.shape[0] != 6:
-        data = data[1:, 4]
+        for col in data:
+            if "sampling rate" in col:
+                srate = float(col[-3])
+            elif "time" in col:
+                time = col[10:-1]
+                nums = re.split(r'[:.]', time)
+                timestamp = ownTime.Time(int(nums[0]), int(nums[1]), int(nums[2]), int(nums[3]))
+        data = data.values[1:, 4]
     else:
-        data = data[:, 4]
-    if data.shape[0] < 9000:
-        return None
+        srate = 300
+        timestamp = ownTime.Time(0,0,0,0)
+        data = data.values[:, 4]
 
-    return data.astype(np.float32)
+    return (timestamp, srate, data.astype(np.float32))
 
 def get_hr(data):
-    raw = mne.io.RawArray(data.reshape(1, -1), info)
-    times = np.arange(0, data.shape[0] / SFREQ, 1 / SFREQ)
-    print(data.shape, times.shape, times[-1])
+    info = mne.create_info(ch_names=["ECG"], sfreq=data[1], ch_types=["ecg"])
+    raw = mne.io.RawArray(data[2].reshape(1, -1), info)
+    times = np.arange(0, data.shape[0] / data[1], 1 / data[1])
+
     events , _, avg_pulse = mne.preprocessing.find_ecg_events(raw)
     events = events[:,0]
     hr = []
     for i in range(events.shape[0] - 1):
+        time = (times[events[i]] + times[events[i+1]]) / 2
         duration = times[events[i+1]] - times[events[i]]
-        hr.append( ((times[events[i]],times[events[i+1]]), 60 / duration))
+        hr.append((time, 60 / duration))
     return (hr, times[-1], avg_pulse)
 
 if __name__ == "__main__":
@@ -39,9 +46,10 @@ if __name__ == "__main__":
 
     data = [get_data(file) for file in files]
     hr = [get_hr(d) for d in data]
+
     for i, x in enumerate(hr):
-        print("Reading {}, avg_hr: {:.2f}, times: {:.2f} ...".format(files[i][1], x[1], x[2]))
+        print("Reading {}, avg_hr: {:.2f}, times: {:.2f} ...".format(files[i][1], x[2], x[1]))
         for xx in x[0]:
-            print("heart rate of ({:.2f}, {:.2f}): {:.2f}".format(xx[0][0], xx[0][1], xx[1]))
+            print("time: {:.2f}, hr = {:.2f}".format(xx[0], xx[1]))
         
 

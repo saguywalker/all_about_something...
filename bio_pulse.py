@@ -12,7 +12,7 @@ def get_data(file):
     if data.shape[0] != 6:
         for col in data:
             if "sampling rate" in col:
-                srate = float(col[-3])
+                srate = float(col[-3:])
             elif "time" in col:
                 time = col[10:-1]
                 nums = re.split(r'[:.]', time)
@@ -28,7 +28,7 @@ def get_data(file):
 def get_hr(data):
     info = mne.create_info(ch_names=["ECG"], sfreq=data[1], ch_types=["ecg"])
     raw = mne.io.RawArray(data[2].reshape(1, -1), info)
-    times = np.arange(0, data.shape[0] / data[1], 1 / data[1])
+    times = np.arange(0, data[2].shape[0] / data[1], 1 / data[1])
 
     events , _, avg_pulse = mne.preprocessing.find_ecg_events(raw)
     events = events[:,0]
@@ -36,7 +36,9 @@ def get_hr(data):
     for i in range(events.shape[0] - 1):
         time = (times[events[i]] + times[events[i+1]]) / 2
         duration = times[events[i+1]] - times[events[i]]
-        hr.append((time, 60 / duration))
+        timestamp = data[0].add(time)
+        print("{:.2f}, {}".format(time, timestamp))
+        hr.append((timestamp, 60 / duration))
     return (hr, times[-1], avg_pulse)
 
 if __name__ == "__main__":
@@ -47,9 +49,8 @@ if __name__ == "__main__":
     data = [get_data(file) for file in files]
     hr = [get_hr(d) for d in data]
 
-    for i, x in enumerate(hr):
+    """for i, x in enumerate(hr):
         print("Reading {}, avg_hr: {:.2f}, times: {:.2f} ...".format(files[i][1], x[2], x[1]))
         for xx in x[0]:
-            print("time: {:.2f}, hr = {:.2f}".format(xx[0], xx[1]))
+            print("time: {}, hr = {:.2f}".format(xx[0], xx[1]))"""
         
-

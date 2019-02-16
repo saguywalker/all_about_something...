@@ -4,6 +4,10 @@ import numpy as np
 import mne
 import sys
 import datetime
+import re
+
+pattern_time = re.compile('\d+:\d+:\d+.\d+')
+pattern_date = re.compile('\d+-\d+-\d+')
 
 def get_data(file):
     path = os.path.join(file[0], file[1])
@@ -13,11 +17,11 @@ def get_data(file):
             if "sampling rate" in col:
                 srate = float(col[-3:])
             elif "time" in col:
-                time = col[-12:-1]
+                time = pattern_time.search(col).group()
             elif "date" in col:
-                date = col[-10:-1]
+                date = pattern_date.search(col).group()
         data = data.values[1:, 4]
-        timestamp = datetime.datetime.strptime(date+","+time, "%Y-%m-%d,%H:%M:%S.%f")
+        timestamp = datetime.datetime.strptime(date+" "+time, "%Y-%m-%d %H:%M:%S.%f")
     else:
         srate = 300
         timestamp = datetime.datetime.now()
@@ -37,19 +41,24 @@ def get_hr(data):
         time = (times[events[i]] + times[events[i+1]]) / 2
         duration = times[events[i+1]] - times[events[i]]
         timestamp = data[0] + datetime.timedelta(seconds=time)
-        hr.append((timestamp, 60 / duration))
-    return (hr, times[-1], avg_pulse)
+        ans = "{:.2f}".format(60/duration)
+        hr.append((timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-1], ans))
+    return (np.array(hr), times[-1], avg_pulse)
+
+def write_output(result):
+    print("writing...")
+    
 
 if __name__ == "__main__":
     file_path = os.path.join(sys.argv[1], "Biosignalsplux")
     files = [(file_path, f) for f in os.listdir(file_path) if ".csv" in f]
-    print("List of files: {}".format(files))
-
+    print("List of files...")
+    for file in files:
+        print(file)
     data = [get_data(file) for file in files]
     hr = [get_hr(d) for d in data]
 
     for i, x in enumerate(hr):
         print("Reading {}, avg_hr: {:.2f}, times: {:.2f}, srate: {} ...".format(files[i][1], x[2], x[1], data[i][1]))
-        for xx in x[0]:
-            print("time: {}, hr = {:.2f}".format(xx[0].strftime("%Y-%m-%d %H:%M:%S.%f"), xx[1]))
+        print(x[0])
         

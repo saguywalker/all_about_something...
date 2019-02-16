@@ -43,11 +43,11 @@ def get_hr(data):
         timestamp = data[0] + datetime.timedelta(seconds=time)
         ans = "{:.2f}".format(60/duration)
         hr.append((timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-1], ans))
-    return (np.array(hr), times[-1], avg_pulse)
+    return (hr, times[-1], avg_pulse)
 
-def write_output(result):
-    print("writing...")
-    
+def write_output(fname, result):
+    df = pd.DataFrame(result[0], columns=["timestamp", "heart rate"])
+    df.to_csv(os.path.join("heartrate",fname+"-result.csv"), index=False, na_rep=None)
 
 if __name__ == "__main__":
     file_path = os.path.join(sys.argv[1], "Biosignalsplux")
@@ -58,7 +58,5 @@ if __name__ == "__main__":
     data = [get_data(file) for file in files]
     hr = [get_hr(d) for d in data]
 
-    for i, x in enumerate(hr):
-        print("Reading {}, avg_hr: {:.2f}, times: {:.2f}, srate: {} ...".format(files[i][1], x[2], x[1], data[i][1]))
-        print(x[0])
-        
+    for i, h in enumerate(hr):
+        write_output(files[i][1], h)

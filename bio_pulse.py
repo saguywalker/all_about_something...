@@ -3,8 +3,7 @@ import pandas as pd
 import numpy as np
 import mne
 import sys
-import ownTime
-import re
+import datetime
 
 def get_data(file):
     path = os.path.join(file[0], file[1])
@@ -14,13 +13,14 @@ def get_data(file):
             if "sampling rate" in col:
                 srate = float(col[-3:])
             elif "time" in col:
-                time = col[10:-1]
-                nums = re.split(r'[:.]', time)
-                timestamp = ownTime.Time(int(nums[0]), int(nums[1]), int(nums[2]), int(nums[3]))
+                time = col[-12:-1]
+            elif "date" in col:
+                date = col[-10:-1]
         data = data.values[1:, 4]
+        timestamp = datetime.datetime.strptime(date+","+time, "%Y-%m-%d,%H:%M:%S.%f")
     else:
         srate = 300
-        timestamp = ownTime.Time(0,0,0,0)
+        timestamp = datetime.datetime.now()
         data = data.values[:, 4]
 
     return (timestamp, srate, data.astype(np.float32))
@@ -36,8 +36,7 @@ def get_hr(data):
     for i in range(events.shape[0] - 1):
         time = (times[events[i]] + times[events[i+1]]) / 2
         duration = times[events[i+1]] - times[events[i]]
-        timestamp = data[0].add(time)
-        print("{:.2f}, {}".format(time, timestamp))
+        timestamp = data[0] + datetime.timedelta(seconds=time)
         hr.append((timestamp, 60 / duration))
     return (hr, times[-1], avg_pulse)
 
@@ -49,8 +48,8 @@ if __name__ == "__main__":
     data = [get_data(file) for file in files]
     hr = [get_hr(d) for d in data]
 
-    """for i, x in enumerate(hr):
-        print("Reading {}, avg_hr: {:.2f}, times: {:.2f} ...".format(files[i][1], x[2], x[1]))
+    for i, x in enumerate(hr):
+        print("Reading {}, avg_hr: {:.2f}, times: {:.2f}, srate: {} ...".format(files[i][1], x[2], x[1], data[i][1]))
         for xx in x[0]:
-            print("time: {}, hr = {:.2f}".format(xx[0], xx[1]))"""
+            print("time: {}, hr = {:.2f}".format(xx[0].strftime("%Y-%m-%d %H:%M:%S.%f"), xx[1]))
         

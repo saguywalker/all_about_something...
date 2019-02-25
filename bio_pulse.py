@@ -25,21 +25,6 @@ def get_data(file):
     data = data.values[1:, 4]
     timestamp = datetime.datetime.strptime(date+" "+time, "%Y-%m-%d %H:%M:%S.%f")
 
-    """if data.shape[0] != 6:
-        for col in data:
-            if "sampling rate" in col:
-                srate = float(col[-3:])
-            elif "time" in col:
-                time = P_TIME.search(col).group()
-            elif "date" in col:
-                date = P_DATE.search(col).group()
-        data = data.values[1:, 4]
-        timestamp = datetime.datetime.strptime(date+" "+time, "%Y-%m-%d %H:%M:%S.%f")
-    else:
-        srate = 300
-        timestamp = datetime.datetime.now()
-        data = data.values[:, 4]"""
-
     return (timestamp, srate, data.astype(np.float32))
 
 def get_hr(data):
@@ -55,24 +40,25 @@ def get_hr(data):
         duration = times[events[i+1]] - times[events[i]]
         timestamp = data[0] + datetime.timedelta(seconds=time)
         ans = "{:.2f}".format(60/duration)
-        hr.append((timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-1], ans))
+        hr.append([timestamp, ans])
+        #hr.append((timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-1], ans))
     print("{} hr(s) was found from {} events, ({},{},{})\n".format(len(hr), events.shape, data[0], data[1], data[2].shape))
     return (hr, times[-1], avg_pulse)
 
 def write_output(fname, results):
     all_data = results[0][0]
-    print("all_data:",len(all_data), len(all_data[0]))
+    print("first data's file:",len(all_data), len(all_data[0]))
     print("len: {}".format(len(results)))
     if len(results) > 1:
         for r in results[1:]:
             print("data shape: {}".format(len(r[0])))
             if len(r[0]) > 0:
                 all_data = np.concatenate((all_data, r[0]), axis=0)
-                print(all_data.shape)
-
-    df = pd.DataFrame(all_data, columns=["timestamp", "heart rate"])
-    df = df.sort_values(by="timestamp")
-    df.to_csv(os.path.join("heartrate",fname+"-result.csv"), index=False, na_rep=None)
+    print("all data:", all_data.shape)
+    all_data[all_data[:, 0].argsort()]
+    df = pd.DataFrame(all_data, columns=["Timestamp", "HR_biosignalsplux"])
+    #df.to_csv(os.path.join("heartrate",fname+"_biosignalsplux_mne.csv"), index_label="index", na_rep=None)
+    df.to_csv(os.path.join("heartrate",fname+"_biosignalsplux_mne.csv"), index_label="Index", na_rep=None)
 
 def read_each_folder(folder, sub_folder):
     file_path = os.path.join(folder, sub_folder)
@@ -88,7 +74,7 @@ def read_each_folder(folder, sub_folder):
     print("*"*30)
 
 if __name__ == "__main__":
-    folders = [f for f in os.listdir() if "Subject09" in f]
+    folders = [f for f in os.listdir() if "Subject0" in f or "Subject10" in f]
     folders.sort()
     #folders = [sys.argv[1]]
     for folder in folders:

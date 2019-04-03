@@ -51,35 +51,38 @@ def get_hr(data):
 
 def write_output(fname, results):
     all_data = results[0][0]
-    print("first data's file:",len(all_data), len(all_data[0]))
-    print("len: {}".format(len(results)))
     if len(results) > 1:
         for r in results[1:]:
-            print("data shape: {}".format(len(r[0])))
             if len(r[0]) > 0:
                 all_data = np.concatenate((all_data, r[0]), axis=0)
     print("all data:", all_data.shape)
     all_data[all_data[:, 0].argsort()]
-    df = pd.DataFrame(all_data, columns=["Timestamp", "HR_BVP_empatica"])
-    #df.to_csv(os.path.join("heartrate",fname+"_biosignalsplux_mne.csv"), index_label="index", na_rep=None)
-    df.to_csv(os.path.join("bvp_empatica",fname+"_mne.csv"), index_label="Index", na_rep=None)
+    df = pd.DataFrame(all_data, columns=["Timestamp", "HR_biosignalsplux"])
+    if not os.path.exists("heartrate_result"):
+        os.makedirs("heartrate_result")
+    df.to_csv(os.path.join("heartrate_result",fname+"_biosignalsplux_mne.csv"), index=True, na_rep=None)
+    #df.to_csv(os.path.join("bvp_empatica",fname+"_mne.csv"), index=False, na_rep=None)
 
 def read_each_folder(folder, sub_folder):
     file_path = os.path.join(folder, sub_folder)
-    files = [(file_path, f) for f in os.listdir(file_path) if "Bvp" in f]
+    files = [(file_path, f) for f in os.listdir(file_path) if ".csv" in f]
     print("List of files...")
     for file in files:
         print(file)
+
     data = [get_data(file) for file in files]
     hr = [get_hr(d) for d in data]
 
     write_output(folder, hr)
     print("{} is writed".format(folder))
-    print("*"*30)
+    print("*"*50)
 
+
+#"python3 bio_pulse.py Biosignalsplux"
 if __name__ == "__main__":
+    #folders = [f for f in os.listdir() if "Subject02" in f]
     folders = [f for f in os.listdir() if "Subject0" in f or "Subject10" in f]
     folders.sort()
-    #folders = [sys.argv[1]]
+    folder_name = sys.argv[1]
     for folder in folders:
-        read_each_folder(folder, "Empatica")
+        read_each_folder(folder, folder_name)
